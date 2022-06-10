@@ -8,6 +8,7 @@ import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router";
 import { Link } from "react-router-dom";
 import db from "./firebase";
+import EditButton from "./EditButton";
 
 function Sidechattile({ addnewchat, roomname, id }) {
   const [seed, setSeed] = useState("");
@@ -58,13 +59,20 @@ function Sidechattile({ addnewchat, roomname, id }) {
           </span>
           <br></br>
           <span style={{ fontSize: "12px" }}>
-            {messages.length > 0 ? messages[0].message : ""}..
+            {messages.length > 0 ? (
+              messages[0].type == "attachment" ? (
+                "Image"
+              ) : (
+                <span>{messages[0].message.substr(0, 10)}</span>
+              )
+            ) : (
+              ""
+            )}
+            ..
           </span>
         </div>
       </div>
-      <IconButton style={{ position: "absolute", top: "10px", left: "80%" }} >
-        <ArrowDownwardRounded style={{ width: "20px", height: "20px" }} />
-      </IconButton>
+      <EditButton id={id}></EditButton>
     </Link>
   ) : (
     <div className="sidechattile" onClick={createchat}>

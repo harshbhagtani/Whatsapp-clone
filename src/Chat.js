@@ -17,6 +17,7 @@ import "./chat.css";
 import db from "./firebase";
 import "emoji-mart/css/emoji-mart.css";
 import { Picker } from "emoji-mart";
+import UploadFilePreview from "./UploadFilePreview";
 
 function Chat(props) {
   //console.log(props.user.displayName);
@@ -24,12 +25,16 @@ function Chat(props) {
   const [roomname, setRoomname] = useState("");
   const [messages, setMessages] = useState([]);
   const { roomid } = useParams();
+  const [file, setFiles] = useState([]);
+  const [dataa, setDataa] = useState("");
+  const [modal, setModal] = useState(false);
 
   useEffect(() => {
     if (roomid) {
       db.collection("rooms")
         .doc(roomid)
         .onSnapshot((snapshot) => {
+          if (!snapshot.data()) return;
           console.log(snapshot.data(), roomid);
           setRoomname(snapshot.data().name);
         });
@@ -48,9 +53,43 @@ function Chat(props) {
     }
   }, [roomid]);
 
-  const sendMessage = (e) => {
+  const sendMessage2 = (basest, type) => {
+    if (!basest) return;
+
+    const datetime = new Date();
+    console.log({
+      message: basest,
+      name: props.user.displayName,
+      time:
+        datetime.toISOString().substr(0, 10) +
+        " " +
+        datetime.toLocaleTimeString(),
+      type,
+    });
+
+    console.log(
+      datetime.toISOString().substr(0, 10) +
+        " " +
+        datetime.toISOString().substr(11, 5)
+    );
+    db.collection("rooms")
+      .doc(roomid)
+      .collection("messages")
+      .add({
+        message: basest,
+        name: props.user.displayName,
+        time:
+          datetime.toISOString().substr(0, 10) +
+          " " +
+          datetime.toLocaleTimeString(),
+        type,
+      });
+  };
+
+  const sendMessage = (e, type) => {
     e.preventDefault();
     console.log(message);
+
     if (message === "") return;
 
     const datetime = new Date();
@@ -70,6 +109,7 @@ function Chat(props) {
           datetime.toISOString().substr(0, 10) +
           " " +
           datetime.toLocaleTimeString(),
+        type,
       });
 
     setMessage("");
@@ -84,6 +124,19 @@ function Chat(props) {
     let emoji = String.fromCodePoint(...codesArray);
     setMessage(message + emoji);
   };
+
+  const Choosefile = (e) => {
+    setFiles(e.target.files[0]);
+
+    const reader = new FileReader();
+    reader.readAsDataURL(e.target.files[0]);
+    reader.onload = () => {
+      console.log(reader.result);
+      setDataa(reader.result);
+      setModal(true);
+    };
+  };
+  console.log(dataa);
 
   return (
     <div className="right-chat">
@@ -103,17 +156,56 @@ function Chat(props) {
           <IconButton>
             <SearchOutlined />
           </IconButton>
-          <IconButton>
+
+          <input
+            type="file"
+            id="attachment"
+            onChange={(e) => {
+              Choosefile(e);
+            }}
+            accept="image/png, image/gif, image/jpeg"
+            style={{ display: "none" }}
+          ></input>
+          <label for="attachment">
             <AttachFile />
-          </IconButton>
+          </label>
+
           <IconButton>
             <Settings></Settings>
           </IconButton>
         </div>
       </div>
-      <div className="chat-body">
+      <UploadFilePreview
+        data={dataa}
+        modal={modal}
+        setModal={setModal}
+        sendMessage={(data) => sendMessage2(data, "attachment")}
+      />
+      <div className="chat-body" style={{ display: modal ? "none" : "" }}>
         {messages.map((data) => {
           const val = props.user.displayName == data.name ? "chat-sender" : "";
+
+          if (data.type == "attachment") {
+            return (
+              <div className={`chat_msg ` + val} style={{ padding: "15px" }}>
+                <div target={data.name} className={`chat_name`}>
+                  {data.name.substr(0, 10) + "..."}
+                </div>
+                <img
+                  src={data.message}
+                  style={{ width: "200px", height: "auto" }}
+                ></img>
+
+                <span
+                  className="time_chat"
+                  style={{ position: "absolute", bottom: 0, right: 0 }}
+                >
+                  {data.time}
+                </span>
+              </div>
+            );
+          }
+
           return (
             <div className={`chat_msg ` + val}>
               <div target={data.name} className={`chat_name`}>
@@ -126,7 +218,7 @@ function Chat(props) {
           );
         })}
       </div>
-      <div className="chat-foot">
+      <div className="chat-foot" style={{ display: modal ? "none" : "" }}>
         <IconButton onClick={() => setDisplayEmoji(!displayEmoji)}>
           {displayEmoji == 0 ? <InsertEmoticon /> : <CancelOutlined />}
         </IconButton>
@@ -137,7 +229,7 @@ function Chat(props) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           ></input>
-          <IconButton type="submit" onClick={sendMessage}>
+          <IconButton type="submit" onClick={(e) => sendMessage(e, "text")}>
             <Send />
           </IconButton>
         </form>
